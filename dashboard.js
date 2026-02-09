@@ -330,17 +330,26 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
   });
 }
 
-// Check for stored messages from extension
-async function loadFromExtension() {
-  if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get('chatflowMessages', (data) => {
-      if (data.chatflowMessages && data.chatflowMessages.length > 0) {
-        document.getElementById('connectionText').textContent = 'Connected to Extension';
-        document.getElementById('streamTitle').textContent = 'Live Stream Chat';
-        data.chatflowMessages.forEach(msg => processMessage(msg));
+// Check for messages passed via URL
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const data = params.get('data');
+  
+  if (data) {
+    try {
+      const decoded = JSON.parse(atob(decodeURIComponent(data)));
+      if (Array.isArray(decoded) && decoded.length > 0) {
+        document.getElementById('connectionText').textContent = 'Data loaded from extension!';
+        document.getElementById('streamTitle').textContent = 'Live Stream Chat Analysis';
+        decoded.forEach(msg => processMessage(msg));
+        console.log('Loaded', decoded.length, 'messages from URL');
+        return true;
       }
-    });
+    } catch (e) {
+      console.error('Error parsing URL data:', e);
+    }
   }
+  return false;
 }
 
 // Initialize
@@ -348,13 +357,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initScene();
   updateVisualization();
   
-  // Try to load from extension
-  setTimeout(loadFromExtension, 500);
+  // Try to load from URL (data passed from extension)
+  const loaded = loadFromURL();
   
-  // Auto-start demo if no extension data after 3 seconds
-  setTimeout(() => {
-    if (messages.length === 0) {
-      console.log('No extension data, showing demo prompt');
-    }
-  }, 3000);
+  if (!loaded) {
+    console.log('No data in URL - click Demo Mode or scan from extension');
+  }
 });
