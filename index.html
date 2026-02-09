@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatFlow Command Center</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'SF Pro Display', -apple-system, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+    }
+    
+    /* Starfield background */
+    .starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+      z-index: 0;
+    }
+    
+    .stars {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(2px 2px at 20px 30px, #eee, transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+        radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent);
+      background-repeat: repeat;
+      background-size: 200px 200px;
+      animation: stars 150s linear infinite;
+    }
+    
+    @keyframes stars {
+      from { transform: translateY(0); }
+      to { transform: translateY(-200px); }
+    }
+    
+    /* Main container */
+    .command-center {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 80px 1fr 120px;
+      grid-template-columns: 300px 1fr 300px;
+    }
+    
+    /* Header */
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      background: linear-gradient(180deg, rgba(0,20,40,0.9) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(0,200,255,0.2);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #00d4ff, #0066ff);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    
+    .logo-text {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #00d4ff, #00ff88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .status-bar {
+      display: flex;
+      gap: 30px;
+    }
+    
+    .status-item {
+      text-align: center;
+    }
+    
+    .status-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'SF Mono', monospace;
+    }
+    
+    .status-value.cyan { color: #00d4ff; }
+    .status-value.green { color: #00ff88; }
+    .status-value.blue { color: #0088ff; }
+    .status-value.red { color: #ff4466; }
+    
+    .status-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #668;
+    }
+    
+    /* Left Panel - Threads */
+    .left-panel {
+      background: rgba(0,10,20,0.8);
+      border-right: 1px solid rgba(0,200,255,0.1);
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .panel-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #00d4ff;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .panel-title::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #00d4ff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #00d4ff;
+    }
+    
+    .thread-card {
+      background: rgba(0,50,100,0.3);
+      border: 1px solid rgba(0,200,255,0.2);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .thread-card:hover {
+      background: rgba(0,100,150,0.4);
+      border-color: #00d4ff;
+      transform: translateX(5px);
+      box-shadow: 0 0 20px rgba(0,200,255,0.2);
+    }
+    
+    .thread-card.active {
+      background: rgba(0,200,255,0.2);
+      border-color: #00d4ff;
+    }
+    
+    .thread-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .thread-type {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 100px;
+      font-weight: 600;
+    }
+    
+    .thread-type.convo { background: rgba(0,255,136,0.2); color: #00ff88; }
+    .thread-type.direct { background: rgba(0,136,255,0.2); color: #0088ff; }
+    .thread-type.spam { background: rgba(255,68,102,0.2); color: #ff4466; }
+    
+    .thread-count {
+      font-size: 12px;
+      color: #668;
+    }
+    
+    .thread-participants {
+      font-size: 13px;
+      color: #aac;
+      margin-bottom: 4px;
+    }
+    
+    .thread-preview {
+      font-size: 11px;
+      color: #668;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    /* Main Visualization Area */
+    .main-view {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .viz-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    /* Conversation Room View */
+    .room-view {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,10,20,0.95);
+      padding: 30px;
+      overflow-y: auto;
+    }
+    
+    .room-view.active {
+      display: block;
+      animation: roomEnter 0.5s ease;
+    }
+    
+    @keyframes roomEnter {
+      from { 
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(0,200,255,0.2);
+    }
+    
+    .room-title {
+      font-size: 24px;
+      font-weight: 600;
+    }
+    
+    .room-close {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,68,102,0.2);
+      border: 1px solid #ff4466;
+      color: #ff4466;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .room-close:hover {
+      background: #ff4466;
+      color: #000;
+    }
+    
+    .room-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .room-message {
+      background: rgba(0,50,100,0.3);
+      border-left: 3px solid #00d4ff;
+      padding: 15px 20px;
+      border-radius: 0 12px 12px 0;
+      animation: messageSlide 0.3s ease;
+    }
+    
+    .room-message.reply {
+      margin-left: 40px;
+      border-left-color: #00ff88;
+    }
+    
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+    }
+    
+    .message-author {
+      color: #00d4ff;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .message-text {
+      color: #dde;
+      line-height: 1.5;
+    }
+    
+    .message-time {
+      font-size: 11px;
+      color: #668;
+      margin-top: 8px;
+    }
+    
+    /* Right Panel - Live Feed */
+    .right-panel {
+      background: rgba(0,10,20,0.8);
+      border-left: 1px solid rgba(0,200,255,0.1);
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .feed-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: rgba(0,30,60,0.5);
+      border-left: 2px solid #0088ff;
+      animation: feedIn 0.3s ease;
+    }
+    
+    .feed-message.thread { border-left-color: #00ff88; }
+    .feed-message.spam { border-left-color: #ff4466; opacity: 0.5; }
+    
+    @keyframes feedIn {
+      from { opacity: 0; transform: translateY(-10px); }
+    }
+    
+    .feed-author {
+      font-size: 12px;
+      font-weight: 600;
+      color: #00d4ff;
+      margin-bottom: 4px;
+    }
+    
+    .feed-text {
+      font-size: 13px;
+      color: #aac;
+    }
+    
+    /* Bottom Control Bar */
+    .control-bar {
+      grid-column: 1 / -1;
+      background: linear-gradient(0deg, rgba(0,20,40,0.9) 0%, transparent 100%);
+      border-top: 1px solid rgba(0,200,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 20px;
+    }
+    
+    .control-btn {
+      padding: 12px 30px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,200,255,0.3);
+      background: rgba(0,50,100,0.3);
+      color: #00d4ff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .control-btn:hover {
+      background: rgba(0,200,255,0.2);
+      border-color: #00d4ff;
+      box-shadow: 0 0 20px rgba(0,200,255,0.3);
+    }
+    
+    .control-btn.primary {
+      background: linear-gradient(135deg, #00d4ff, #0066ff);
+      border: none;
+      color: #000;
+    }
+    
+    /* Canvas for 3D visualization */
+    #vizCanvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Connection status */
+    .connection-status {
+      position: fixed;
+      bottom: 140px;
+      right: 30px;
+      padding: 10px 20px;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #00ff88;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #00ff88;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .connection-dot {
+      width: 8px;
+      height: 8px;
+      background: #00ff88;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 10px #00ff88; }
+      50% { opacity: 0.5; box-shadow: none; }
+    }
+    
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #446;
+    }
+    
+    .empty-state svg {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="starfield">
+    <div class="stars"></div>
+  </div>
+  
+  <div class="command-center">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">🌊</div>
+        <span class="logo-text">CHATFLOW COMMAND</span>
+      </div>
+      
+      <div class="status-bar">
+        <div class="status-item">
+          <div class="status-value cyan" id="totalCount">0</div>
+          <div class="status-label">Total Messages</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value green" id="threadCount">0</div>
+          <div class="status-label">Conversations</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value blue" id="directCount">0</div>
+          <div class="status-label">Direct</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value red" id="spamCount">0</div>
+          <div class="status-label">Spam</div>
+        </div>
+      </div>
+      
+      <div style="font-family: monospace; color: #668;">
+        <span id="streamTitle">Waiting for connection...</span>
+      </div>
+    </header>
+    
+    <!-- Left Panel - Threads -->
+    <aside class="left-panel">
+      <div class="panel-title">Active Conversations</div>
+      <div id="threadsList"></div>
+    </aside>
+    
+    <!-- Main Visualization -->
+    <main class="main-view">
+      <canvas id="vizCanvas"></canvas>
+      
+      <div class="room-view" id="roomView">
+        <div class="room-header">
+          <h2 class="room-title" id="roomTitle">Conversation</h2>
+          <button class="room-close" onclick="closeRoom()">×</button>
+        </div>
+        <div class="room-messages" id="roomMessages"></div>
+      </div>
+    </main>
+    
+    <!-- Right Panel - Live Feed -->
+    <aside class="right-panel">
+      <div class="panel-title">Live Feed</div>
+      <div id="liveFeed"></div>
+    </aside>
+    
+    <!-- Bottom Controls -->
+    <div class="control-bar">
+      <button class="control-btn" onclick="toggleView('nodes')">🔮 Node View</button>
+      <button class="control-btn" onclick="toggleView('timeline')">📊 Timeline</button>
+      <button class="control-btn" onclick="toggleView('clusters')">🎯 Clusters</button>
+      <button class="control-btn primary" onclick="openDemoMode()">▶ Demo Mode</button>
+    </div>
+  </div>
+  
+  <div class="connection-status">
+    <div class="connection-dot"></div>
+    <span id="connectionText">Listening for extension...</span>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
