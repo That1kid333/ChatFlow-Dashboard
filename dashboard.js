@@ -9,7 +9,17 @@ let isDemoMode = false;
 
 // Initialize Three.js scene
 function initScene() {
+  if (typeof THREE === 'undefined') {
+    console.error('Three.js not loaded!');
+    return;
+  }
+  
   const canvas = document.getElementById('vizCanvas');
+  if (!canvas) {
+    console.error('Canvas not found!');
+    return;
+  }
+  
   const container = canvas.parentElement;
   
   scene = new THREE.Scene();
@@ -42,6 +52,12 @@ function initScene() {
 
 // Create a conversation node
 function createNode(thread, index, total) {
+  // Safety check - make sure Three.js is loaded and scene exists
+  if (typeof THREE === 'undefined' || !scene) {
+    console.warn('Three.js not ready, skipping node creation');
+    return null;
+  }
+  
   const geometry = new THREE.SphereGeometry(2 + thread.messages.length * 0.5, 32, 32);
   
   // Color based on type
@@ -73,8 +89,10 @@ function createNode(thread, index, total) {
   // Store thread data
   sphere.userData = { thread, originalScale: sphere.scale.clone() };
   
-  scene.add(sphere);
-  nodes.push(sphere);
+  if (scene) {
+    scene.add(sphere);
+    nodes.push(sphere);
+  }
   
   // Add glow effect
   const glowGeometry = new THREE.SphereGeometry(3 + thread.messages.length * 0.5, 32, 32);
@@ -321,14 +339,8 @@ window.addEventListener('message', (event) => {
   }
 });
 
-// Listen for chrome extension messages
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'CHATFLOW_MESSAGES') {
-      message.messages.forEach(msg => processMessage(msg));
-    }
-  });
-}
+// Chrome extension messages only work in extension context
+// Data is passed via URL parameter instead
 
 // Check for messages passed via URL
 function loadFromURL() {
