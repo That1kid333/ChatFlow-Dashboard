@@ -321,8 +321,40 @@ window.addEventListener('message', (event) => {
   }
 });
 
+// Listen for chrome extension messages
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'CHATFLOW_MESSAGES') {
+      message.messages.forEach(msg => processMessage(msg));
+    }
+  });
+}
+
+// Check for stored messages from extension
+async function loadFromExtension() {
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    chrome.storage.local.get('chatflowMessages', (data) => {
+      if (data.chatflowMessages && data.chatflowMessages.length > 0) {
+        document.getElementById('connectionText').textContent = 'Connected to Extension';
+        document.getElementById('streamTitle').textContent = 'Live Stream Chat';
+        data.chatflowMessages.forEach(msg => processMessage(msg));
+      }
+    });
+  }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   initScene();
   updateVisualization();
+  
+  // Try to load from extension
+  setTimeout(loadFromExtension, 500);
+  
+  // Auto-start demo if no extension data after 3 seconds
+  setTimeout(() => {
+    if (messages.length === 0) {
+      console.log('No extension data, showing demo prompt');
+    }
+  }, 3000);
 });
